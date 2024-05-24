@@ -1,5 +1,5 @@
 import pygame
-
+# One change
 # Constants
 CIEL = (0, 200, 255)
 RED = (200, 0, 0)
