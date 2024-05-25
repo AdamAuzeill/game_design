@@ -33,42 +33,16 @@ screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
 
 
 class Player:
-    def __init__(self, surface, pos_x, pos_y, width, height):
+    def __init__(self, surface, pos_x, pos_y):
         self.surface = surface
+        self.rect = surface.get_rect()
         self.pos_x = pos_x
         self.pos_y = pos_y
-        self.width = width
-        self.height = height
+        self.width = self.rect.width
+        self.height = self.rect.height
         self.vel_x = 0
         self.vel_y = 0
         self.can_jump = True
-
-    def upper_hitbox(self):
-        return pygame.Rect(self.pos_x + 1, self.pos_y, self.width - 2, self.height * 0.05)
-
-    def lower_hitbox(self):
-        return pygame.Rect(self.pos_x + 5, self.pos_y + self.height, self.width - 10, self.height * 0.05)
-
-    def left_hitbox(self):
-        return pygame.Rect(self.pos_x, self.pos_y + 1, self.width * 0.05, self.height - 2)
-
-    def right_hitbox(self):
-        return pygame.Rect(self.pos_x + self.width, self.pos_y + 1, self.width * 0.05, self.height - 2)
-
-    def get_surface(self):
-        return self.surface
-
-    def get_x(self):
-        return self.pos_x
-
-    def set_x(self, new_x):
-        self.pos_x = new_x
-
-    def get_y(self):
-        return self.pos_y
-
-    def set_y(self, new_y):
-        self.pos_y = new_y
 
     def move_right(self):
         self.vel_x += VELOCITY
@@ -78,25 +52,53 @@ class Player:
 
     def jump(self):
         is_touching_ground = False
-        for box in list_terrain:
-            box_rect = pygame.Rect(box.pos_x, box.pos_y + self.height * 0.05 - 1, box.width, box.height)
-            if self.lower_hitbox().colliderect(box_rect):
+        for terrain in list_terrain:
+            if terrain.rect.colliderect(self.pos_x, self.pos_y + self.height, self.width, 1):
                 is_touching_ground = True
-        if is_touching_ground:
-            self.vel_y = -6
+        if is_touching_ground and self.vel_y == 0:
+            self.vel_y += -6
 
     def update_position(self):
-        self.pos_x += self.vel_x
-        self.pos_y += self.vel_y
-        self.pos_x = round(self.pos_x)
-        self.pos_y = round(self.pos_y)
-
+        # updates velocities
         self.vel_x *= 0.9
         self.vel_y += GRAVITY
+
         if self.vel_y < -MAX_VEL_Y:
             self.vel_y = -MAX_VEL_Y
         if self.vel_y > MAX_VEL_Y:
             self.vel_y = MAX_VEL_Y
+
+        # initiate
+        dx = round(self.vel_x)
+        dy = round(self.vel_y)
+
+        # collision check
+        for terrain in list_terrain:
+            terrain_rect = pygame.Rect(terrain.pos_x, terrain.pos_y, terrain.width, terrain.height)
+
+            # collision on the x axis
+            if terrain_rect.colliderect(self.pos_x + dx, self.pos_y, self.width, self.height):
+                if self.vel_x < 0:
+                    self.vel_x = 0
+                    dx = terrain.pos_x + terrain.width - self.pos_x
+
+                elif self.vel_x >= 0:
+                    self.vel_x = 0
+                    dx = terrain.pos_x - (self.pos_x + self.width)
+
+            # collision on the y axis
+            if terrain_rect.colliderect(self.pos_x, self.pos_y + dy, self.width, self.height):
+                if self.vel_y < 0:
+                    dy = terrain.pos_y + terrain.height - self.pos_y
+                    self.vel_y = 0
+
+                elif self.vel_y >= 0:
+                    dy = terrain.pos_y - (self.pos_y + self.height)
+                    self.vel_y = 0
+
+        # applies change position
+        self.pos_x += dx
+        self.pos_y += dy
 
 
 class Box:
@@ -106,48 +108,16 @@ class Box:
             self.surface.fill(color)
         else:
             self.surface = surface
-
         self.pos_x = pos_x
         self.pos_y = pos_y
         self.width = width
         self.height = height
+        self.rect = self.surface.get_rect(topleft=(self.pos_x, self.pos_y))
 
-    def check_collision(self, player):
-        player_rect = pygame.Rect(player.get_x(), player.get_y(), player.width, player.height)
-        box_rect = pygame.Rect(self.pos_x, self.pos_y, self.width, self.height)
-
-        if player_rect.colliderect(box_rect):
-            lower = player.lower_hitbox().colliderect(box_rect)
-            upper = player.upper_hitbox().colliderect(box_rect)
-            left = player.left_hitbox().colliderect(box_rect)
-            right = player.right_hitbox().colliderect(box_rect)
-
-            if player.vel_y > 0 and lower:
-                player.set_y(self.pos_y - player.height)
-                player.vel_y = 0
-                player.can_jump = True
-            elif player.vel_y < 0 and upper:
-                player.set_y(self.pos_y + self.height)
-                player.vel_y = 0
-            elif player.vel_x > 0 and right:
-                player.set_x(self.pos_x - player.width)
-                player.vel_x = 0
-            elif player.vel_x < 0 and left:
-                player.set_x(self.pos_x + self.width)
-                player.vel_x = 0
-
-    def get_surface(self):
-        return self.surface
-
-    def get_x(self):
-        return self.pos_x
-
-    def get_y(self):
-        return self.pos_y
 
 
 # Initialize the player
-Bob = Player(personnage, 100, 100, PERSONNAGE_WIDTH, PERSONNAGE_HEIGHT)
+Bob = Player(personnage, 100, 100)
 
 # Initialize the terrain
 ground = Box(-150, 400, WINDOW_WIDTH + 400, 80, GREEN)
@@ -163,10 +133,10 @@ def main():
 
     loop = True
     while loop:
-        if MIN_LEVEL_X < Bob.get_x() < MAX_LEVEL_X:
-            camera_x = -Bob.get_x() + 270
-        if MIN_LEVEL_Y < Bob.get_y() < MAX_LEVEL_Y:
-            camera_y = -Bob.get_y() + 120
+        if MIN_LEVEL_X < Bob.pos_x < MAX_LEVEL_X:
+            camera_x = -Bob.pos_x + 270
+        if MIN_LEVEL_Y < Bob.pos_y < MAX_LEVEL_Y:
+            camera_y = -Bob.pos_y + 120
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -188,9 +158,6 @@ def main():
 
         Bob.update_position()
 
-        for terrain in list_terrain:
-            terrain.check_collision(Bob)
-
         draw_everything(camera_x, camera_y)
 
         pygame.display.flip()
@@ -207,7 +174,7 @@ def draw_everything(camera_x, camera_y):
 
 
 def draw_object(obj, cam=(0, 0)):
-    screen.blit(obj.get_surface(), (obj.get_x() + cam[0], obj.get_y() + cam[1]))
+    screen.blit(obj.surface, (obj.pos_x + cam[0], obj.pos_y + cam[1]))
 
 
 def draw_cursor():
