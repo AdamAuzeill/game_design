@@ -1,4 +1,5 @@
 import pygame
+
 # One change
 # Constants
 CIEL = (0, 200, 255)
@@ -21,7 +22,7 @@ clock = pygame.time.Clock()
 
 # Load images
 cursor = pygame.image.load("mouse-pointer-icon-32x32.png")
-#cursor = pygame.transform.scale(cursor, (30, 30))
+# cursor = pygame.transform.scale(cursor, (30, 30))
 personnage = pygame.image.load("personnage.png")
 PERSONNAGE_HEIGHT = 100
 PERSONNAGE_WIDTH = 100
@@ -29,6 +30,7 @@ personnage = pygame.transform.scale(personnage, (PERSONNAGE_WIDTH, PERSONNAGE_HE
 
 # Screen initialization
 screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
+
 
 class Player:
     def __init__(self, surface, pos_x, pos_y, width, height):
@@ -42,16 +44,16 @@ class Player:
         self.can_jump = True
 
     def upper_hitbox(self):
-        return pygame.Rect(self.pos_x + self.width * 0.05, self.pos_y, self.width * 0.9, self.height * 0.05)
+        return pygame.Rect(self.pos_x + 1, self.pos_y, self.width - 2, self.height * 0.05)
 
     def lower_hitbox(self):
-        return pygame.Rect(self.pos_x + self.width * 0.05, self.pos_y + self.height * 0.95, self.width * 0.9, self.height * 0.05)
+        return pygame.Rect(self.pos_x + 5, self.pos_y + self.height, self.width - 10, self.height * 0.05)
 
     def left_hitbox(self):
-        return pygame.Rect(self.pos_x, self.pos_y + self.height * 0.1, self.width * 0.1, self.height * 0.8)
+        return pygame.Rect(self.pos_x, self.pos_y + 1, self.width * 0.05, self.height - 2)
 
     def right_hitbox(self):
-        return pygame.Rect(self.pos_x + self.width * 0.9, self.pos_y + self.height * 0.1, self.width * 0.1, self.height * 0.8)
+        return pygame.Rect(self.pos_x + self.width, self.pos_y + 1, self.width * 0.05, self.height - 2)
 
     def get_surface(self):
         return self.surface
@@ -75,13 +77,19 @@ class Player:
         self.vel_x -= VELOCITY
 
     def jump(self):
-        if self.can_jump:
+        is_touching_ground = False
+        for box in list_terrain:
+            box_rect = pygame.Rect(box.pos_x, box.pos_y + self.height * 0.05 - 1, box.width, box.height)
+            if self.lower_hitbox().colliderect(box_rect):
+                is_touching_ground = True
+        if is_touching_ground:
             self.vel_y = -6
-            self.can_jump = False
 
     def update_position(self):
         self.pos_x += self.vel_x
         self.pos_y += self.vel_y
+        self.pos_x = round(self.pos_x)
+        self.pos_y = round(self.pos_y)
 
         self.vel_x *= 0.9
         self.vel_y += GRAVITY
@@ -90,10 +98,15 @@ class Player:
         if self.vel_y > MAX_VEL_Y:
             self.vel_y = MAX_VEL_Y
 
+
 class Box:
-    def __init__(self, pos_x, pos_y, width, height, color=(0, 0, 0)):
-        self.surface = pygame.Surface((width, height))
-        self.surface.fill(color)
+    def __init__(self, pos_x, pos_y, width, height, color=(0, 0, 0), surface = False):
+        if surface == False:
+            self.surface = pygame.Surface((width, height))
+            self.surface.fill(color)
+        else:
+            self.surface = surface
+
         self.pos_x = pos_x
         self.pos_y = pos_y
         self.width = width
@@ -104,17 +117,22 @@ class Box:
         box_rect = pygame.Rect(self.pos_x, self.pos_y, self.width, self.height)
 
         if player_rect.colliderect(box_rect):
-            if player.vel_y > 0 and player.lower_hitbox().colliderect(box_rect):
+            lower = player.lower_hitbox().colliderect(box_rect)
+            upper = player.upper_hitbox().colliderect(box_rect)
+            left = player.left_hitbox().colliderect(box_rect)
+            right = player.right_hitbox().colliderect(box_rect)
+
+            if player.vel_y > 0 and lower:
                 player.set_y(self.pos_y - player.height)
                 player.vel_y = 0
                 player.can_jump = True
-            elif player.vel_y < 0 and player.upper_hitbox().colliderect(box_rect):
+            elif player.vel_y < 0 and upper:
                 player.set_y(self.pos_y + self.height)
                 player.vel_y = 0
-            elif player.vel_x > 0 and player.right_hitbox().colliderect(box_rect):
+            elif player.vel_x > 0 and right:
                 player.set_x(self.pos_x - player.width)
                 player.vel_x = 0
-            elif player.vel_x < 0 and player.left_hitbox().colliderect(box_rect):
+            elif player.vel_x < 0 and left:
                 player.set_x(self.pos_x + self.width)
                 player.vel_x = 0
 
@@ -127,6 +145,7 @@ class Box:
     def get_y(self):
         return self.pos_y
 
+
 # Initialize the player
 Bob = Player(personnage, 100, 100, PERSONNAGE_WIDTH, PERSONNAGE_HEIGHT)
 
@@ -136,6 +155,7 @@ box_1 = Box(300, 325, 75, 75, BROWN)
 box_2 = Box(450, 300, 100, 100, RED)
 box_3 = Box(570, 200, 50, 50)
 list_terrain = [ground, box_1, box_2, box_3]
+
 
 def main():
     camera_x = 0
@@ -176,6 +196,7 @@ def main():
         pygame.display.flip()
         clock.tick(60)
 
+
 def draw_everything(camera_x, camera_y):
     cam = (camera_x, camera_y)
     screen.fill(CIEL)
@@ -184,13 +205,16 @@ def draw_everything(camera_x, camera_y):
     draw_object(Bob, cam)
     draw_cursor()
 
+
 def draw_object(obj, cam=(0, 0)):
     screen.blit(obj.get_surface(), (obj.get_x() + cam[0], obj.get_y() + cam[1]))
+
 
 def draw_cursor():
     mouse_x, mouse_y = pygame.mouse.get_pos()
     pygame.mouse.set_visible(False)
     screen.blit(cursor, (mouse_x, mouse_y))
+
 
 if __name__ == '__main__':
     main()
