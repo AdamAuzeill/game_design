@@ -21,9 +21,9 @@ pygame.init()
 clock = pygame.time.Clock()
 
 # Load images
-cursor = pygame.image.load("mouse-pointer-icon-32x32.png")
+cursor = pygame.image.load("assets/Images/mouse-pointer-icon-32x32.png")
 # cursor = pygame.transform.scale(cursor, (30, 30))
-personnage = pygame.image.load("personnage.png")
+personnage = pygame.image.load("assets/Images/personnage.png")
 PERSONNAGE_HEIGHT = 100
 PERSONNAGE_WIDTH = 100
 personnage = pygame.transform.scale(personnage, (PERSONNAGE_WIDTH, PERSONNAGE_HEIGHT))
