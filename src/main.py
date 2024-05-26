@@ -12,7 +12,7 @@ GRAVITY = 0.15
 VELOCITY = 0.5
 MAX_LEVEL_X = 700
 MIN_LEVEL_X = -60
-MAX_LEVEL_Y = 100
+MAX_LEVEL_Y = 120
 MIN_LEVEL_Y = -100
 MAX_VEL_Y = 10
 
@@ -27,6 +27,7 @@ personnage = pygame.image.load("assets/Images/personnage.png")
 PERSONNAGE_HEIGHT = 100
 PERSONNAGE_WIDTH = 100
 personnage = pygame.transform.scale(personnage, (PERSONNAGE_WIDTH, PERSONNAGE_HEIGHT))
+box_image = pygame.image.load("assets/Images/box.png")
 
 # Screen initialization
 screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
@@ -108,6 +109,7 @@ class Box:
             self.surface.fill(color)
         else:
             self.surface = surface
+            self.surface = pygame.transform.scale(self.surface, (width, height))
         self.pos_x = pos_x
         self.pos_y = pos_y
         self.width = width
@@ -115,48 +117,59 @@ class Box:
         self.rect = self.surface.get_rect(topleft=(self.pos_x, self.pos_y))
 
 
+tom_image = pygame.image.load("assets/Images/tom.png")
+tom_image = pygame.transform.scale(tom_image, (70, 100))
 
 # Initialize the player
 Bob = Player(personnage, 100, 100)
+Tom = Player(tom_image, 0, 100)
 
 # Initialize the terrain
 ground = Box(-150, 400, WINDOW_WIDTH + 400, 80, GREEN)
-box_1 = Box(300, 325, 75, 75, BROWN)
-box_2 = Box(450, 300, 100, 100, RED)
-box_3 = Box(570, 200, 50, 50)
+box_1 = Box(300, 325, 75, 75, surface=box_image)
+box_2 = Box(450, 300, 100, 100, surface=box_image)
+box_3 = Box(570, 200, 50, 50, surface=box_image)
 list_terrain = [ground, box_1, box_2, box_3]
 
 
 def main():
-    camera_x = 0
-    camera_y = 0
+    camera_x = 100
+    camera_y = 100
+
+    current_player = Bob
 
     loop = True
     while loop:
-        if MIN_LEVEL_X < Bob.pos_x < MAX_LEVEL_X:
-            camera_x = -Bob.pos_x + 270
-        if MIN_LEVEL_Y < Bob.pos_y < MAX_LEVEL_Y:
-            camera_y = -Bob.pos_y + 120
+        if MIN_LEVEL_X < current_player.pos_x < MAX_LEVEL_X:
+            camera_x = -current_player.pos_x + 270
+        if MIN_LEVEL_Y < current_player.pos_y < MAX_LEVEL_Y:
+            camera_y = -current_player.pos_y + 120
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 loop = False
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if current_player == Bob:
+                    current_player = Tom
+                else:
+                    current_player = Bob
 
         keys = pygame.key.get_pressed()
 
         if keys[pygame.K_a]:
-            Bob.move_left()
+            current_player.move_left()
         if keys[pygame.K_d]:
-            Bob.move_right()
+            current_player.move_right()
         if keys[pygame.K_SPACE]:
-            Bob.jump()
+            current_player.jump()
 
         if keys[pygame.K_s]:
-            Bob.vel_y = 0
+            current_player.vel_y = 0
         if keys[pygame.K_h]:
-            Bob.pos_y -= 10
+            current_player.pos_y -= 10
 
         Bob.update_position()
+        Tom.update_position()
 
         draw_everything(camera_x, camera_y)
 
@@ -170,6 +183,7 @@ def draw_everything(camera_x, camera_y):
     for terrain in list_terrain:
         draw_object(terrain, cam)
     draw_object(Bob, cam)
+    draw_object(Tom, cam)
     draw_cursor()
 
 
